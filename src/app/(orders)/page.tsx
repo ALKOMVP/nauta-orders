@@ -1,11 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { fetchOrders, patchStatus } from "./orders.api";
-import type { Order, OrderStatus } from "@/lib/types";
+import type { Order, OrderStatus, OrdersList } from "@/lib/types";
 import { canTransition, nextStatuses } from "@/lib/transitions";
 import { isOverdue, isNear } from "@/lib/eta";
 
@@ -48,10 +53,10 @@ export default function OrdersPage() {
   const router = useRouter();
 
   const sp = currentSearch();
-  const page = Math.max(1, Number(sp.get("page") ?? 1));
-  const limit = Math.max(1, Number(sp.get("limit") ?? 10));
-  const status = sp.get("status") ?? "";
-  const provider = sp.get("provider") ?? "";
+  const page = Math.max(1, Number(sp.get("page") || "1"));
+  const limit = Math.max(1, Number(sp.get("limit") || "10"));
+  const status = sp.get("status") || "";
+  const provider = sp.get("provider") || "";
 
   const qc = useQueryClient();
 
@@ -60,11 +65,14 @@ export default function OrdersPage() {
     [page, limit, status, provider]
   );
 
-  const { data, isLoading, isFetching, isError } = useQuery({
+  const { data, isLoading, isFetching, isError } = useQuery<OrdersList>({
     queryKey,
     queryFn: () => fetchOrders({ page, limit, status, provider }),
     staleTime: 60_000,
-    placeholderData: (old) => old,
+    gcTime: 5 * 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   const { items, total, limit: apiLimit } = normalizeList(data);
