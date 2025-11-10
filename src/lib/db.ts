@@ -13,16 +13,17 @@ const addDays = (d: Date, days: number) => {
 };
 const pick = <T,>(arr: readonly T[], i: number) => arr[i % arr.length];
 
-function seed(count = 100): Order[] {
+function seed(count = 200): Order[] {
   const now = new Date();
   const rows: Order[] = [];
+
   for (let i = 1; i <= count; i++) {
     const id = `ORD-${pad4(i)}`;
     rows.push({
       id,
       provider: pick(PROVIDERS, i),
       status: pick(STATUSES, i),
-      eta: addDays(now, i - 10).toISOString(),
+      eta: addDays(now, i * 2).toISOString(),
       createdAt: addDays(now, -15).toISOString(),
       updatedAt: addDays(now, -1).toISOString(),
     });

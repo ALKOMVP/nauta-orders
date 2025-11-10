@@ -3,10 +3,11 @@ export type OrderStatus = 'created' | 'in_transit' | 'arrived' | 'delivered' | '
 
 export type Order = {
   id: string;
-  provider: string;
+  provider: Provider;
   status: OrderStatus;
   eta: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type OrdersList = {
@@ -15,3 +16,7 @@ export type OrdersList = {
   limit: number;
   page: number;
 };
+
+export const PROVIDERS = ['Nauta', 'BlueX', 'Globex'] as const;
+
+export type Provider = 'Nauta' | 'BlueX' | 'Globex';

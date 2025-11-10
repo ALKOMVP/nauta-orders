@@ -1,4 +1,3 @@
-// src/app/(orders)/OrderDetailModal.tsx
 "use client";
 
 import { useEffect } from "react";

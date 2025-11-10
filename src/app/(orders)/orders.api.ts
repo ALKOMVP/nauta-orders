@@ -27,7 +27,7 @@ function daysFromNow(n: number) {
   return d.toISOString();
 }
 
-let DB: Order[] = Array.from({ length: 24 }).map((_, i) => {
+let DB: Order[] = Array.from({ length: 100 }).map((_, i) => {
   const provider = PROVIDERS[i % PROVIDERS.length];
   const status = STATUSES[i % STATUSES.length];
   return {
@@ -35,6 +35,7 @@ let DB: Order[] = Array.from({ length: 24 }).map((_, i) => {
     provider,
     status,
     eta: daysFromNow((i % 10) - 3),
+    createdAt: daysFromNow(-(15 + (i % 7))), // ✅ agrega createdAt
     updatedAt: daysFromNow(-(i % 5)),
   };
 });
