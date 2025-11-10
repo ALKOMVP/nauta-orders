@@ -1,31 +1,35 @@
-// src/app/(orders)/OrdersTable.tsx
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   useMutation,
   useQuery,
   useQueryClient,
   UseQueryResult,
-} from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
-import type { Order, OrderStatus, OrdersList } from '@/lib/types';
-import { canTransition, nextStatuses } from '@/lib/transitions';
-import { etaClass, etaLabel } from '@/lib/eta';
-import { fetchOrders, patchStatus, getOrderById } from './orders.api';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { Chip, StatusBadge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import OrderDetailModal from './OrderDetailModal';
-import { useQuery as useRQ } from '@tanstack/react-query';
+} from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import type { Order, OrderStatus, OrdersList } from "@/lib/types";
+import { canTransition, nextStatuses } from "@/lib/transitions";
+import { etaClass, etaLabel } from "@/lib/eta";
+import { fetchOrders, patchStatus, getOrderById } from "./orders.api";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import { Chip, StatusBadge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import OrderDetailModal from "./OrderDetailModal";
+import { useQuery as useRQ } from "@tanstack/react-query";
 
-// Small alert banner to surface action feedback without extra libs.
-function InlineAlert({ type, message }: { type: 'success' | 'error'; message: string }) {
+function InlineAlert({
+  type,
+  message,
+}: {
+  type: "success" | "error";
+  message: string;
+}) {
   const base =
-    type === 'success'
-      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900'
-      : 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900';
+    type === "success"
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900"
+      : "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900";
   return (
     <div
       role="status"
@@ -40,31 +44,34 @@ function InlineAlert({ type, message }: { type: 'success' | 'error'; message: st
 export default function OrdersTable() {
   const qc = useQueryClient();
   const router = useRouter();
-  const sp = useSearchParams();
 
-  // --- URL-synced state (status, provider, page) ---
-  const [status, setStatus] = useState(sp.get('status') ?? '');
-  const [provider, setProvider] = useState(sp.get('provider') ?? '');
-  const initialPage = Math.max(1, Number(sp.get('page') ?? 1));
-  const [page, setPage] = useState(initialPage);
+  const getInitialParams = () => {
+    const sp =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+    const status = sp.get("status") ?? "";
+    const provider = sp.get("provider") ?? "";
+    const page = Math.max(1, Number(sp.get("page") ?? 1));
+    return { status, provider, page };
+  };
 
-  // Static knobs
+  const [{ status, provider, page }, setState] = useState(getInitialParams);
+
   const [limit] = useState(10);
-  const sort = 'eta' as const;
-  const order: 'asc' | 'desc' = 'asc';
+  const sort = "eta" as const;
+  const order: "asc" | "desc" = "asc";
 
-  // Keep URL updated when filters/page change
   useEffect(() => {
     const params = new URLSearchParams();
-    if (status) params.set('status', status);
-    if (provider) params.set('provider', provider);
-    if (page !== 1) params.set('page', String(page));
+    if (status) params.set("status", status);
+    if (provider) params.set("provider", provider);
+    if (page !== 1) params.set("page", String(page));
     router.replace(`?${params.toString()}`, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, provider, page]);
+  }, [status, provider, page, router]);
 
   const ordersKey = useMemo(
-    () => ['orders', { status, provider, page, limit, sort, order }] as const,
+    () => ["orders", { status, provider, page, limit, sort, order }] as const,
     [status, provider, page, limit, sort, order]
   );
 
@@ -75,23 +82,27 @@ export default function OrdersTable() {
     placeholderData: (prev) => prev,
   });
 
-  // Action feedback
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(
-    null
-  );
+  const [alert, setAlert] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const mut = useMutation({
-    mutationFn: (p: { id: string; status: OrderStatus }) => patchStatus(p.id, p.status),
+    mutationFn: (p: { id: string; status: OrderStatus }) =>
+      patchStatus(p.id, p.status),
     onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ['orders'] });
+      await qc.cancelQueries({ queryKey: ["orders"] });
       const prev = qc.getQueryData<OrdersList>(ordersKey);
-
       if (prev) {
         qc.setQueryData<OrdersList>(ordersKey, {
           ...prev,
           items: prev.items.map((o) =>
             o.id === vars.id
-              ? { ...o, status: vars.status, updatedAt: new Date().toISOString() }
+              ? {
+                  ...o,
+                  status: vars.status,
+                  updatedAt: new Date().toISOString(),
+                }
               : o
           ),
         });
@@ -100,14 +111,16 @@ export default function OrdersTable() {
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(ordersKey, ctx.prev);
-      setAlert({ type: 'error', message: 'Update failed. Changes were reverted.' });
+      setAlert({
+        type: "error",
+        message: "Update failed. Changes were reverted.",
+      });
     },
     onSuccess: () => {
-      setAlert({ type: 'success', message: 'Status updated successfully.' });
+      setAlert({ type: "success", message: "Status updated successfully." });
     },
     onSettled: async () => {
-      await qc.invalidateQueries({ queryKey: ['orders'] });
-      // Auto-dismiss feedback to keep the UI clean
+      await qc.invalidateQueries({ queryKey: ["orders"] });
       setTimeout(() => setAlert(null), 2200);
     },
   });
@@ -115,36 +128,31 @@ export default function OrdersTable() {
   const data: Order[] = q.data?.items ?? [];
   const total = q.data?.total ?? 0;
 
-  // Order detail modal
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const detailQ = useRQ({
-    queryKey: ['order', selectedId],
+    queryKey: ["order", selectedId],
     queryFn: () => getOrderById(selectedId as string),
     enabled: open && !!selectedId,
   });
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
         <Chip aria-label="Total orders">{total} total</Chip>
       </div>
 
-      {/* Optional action feedback */}
       {alert && <InlineAlert type={alert.type} message={alert.message} />}
 
-      {/* Filters card */}
       <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-wrap items-center gap-2">
           <Select
             aria-label="Filter by status"
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
+              setState((s) => ({ ...s, status: e.target.value, page: 1 }));
             }}
           >
             <option value="">All status</option>
@@ -159,8 +167,7 @@ export default function OrdersTable() {
             aria-label="Filter by provider"
             value={provider}
             onChange={(e) => {
-              setProvider(e.target.value);
-              setPage(1);
+              setState((s) => ({ ...s, provider: e.target.value, page: 1 }));
             }}
           >
             <option value="">All providers</option>
@@ -174,9 +181,7 @@ export default function OrdersTable() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                setStatus('');
-                setProvider('');
-                setPage(1);
+                setState({ status: "", provider: "", page: 1 });
               }}
             >
               Clear filters
@@ -185,7 +190,6 @@ export default function OrdersTable() {
         </div>
       </div>
 
-      {/* Table card */}
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="max-h-[65vh] overflow-auto rounded-3xl">
           <table className="w-full text-sm">
@@ -199,7 +203,6 @@ export default function OrdersTable() {
               </tr>
             </thead>
             <tbody>
-              {/* Loading skeletons */}
               {q.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr
@@ -225,16 +228,17 @@ export default function OrdersTable() {
                   </tr>
                 ))}
 
-              {/* Empty state */}
               {!q.isLoading && data.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6">
-                    <EmptyState title="No results" hint="Try adjusting filters." />
+                    <EmptyState
+                      title="No results"
+                      hint="Try adjusting filters."
+                    />
                   </td>
                 </tr>
               )}
 
-              {/* Rows */}
               {data.map((o) => (
                 <tr
                   key={o.id}
@@ -264,7 +268,10 @@ export default function OrdersTable() {
                       ) : null;
                     })()}
                   </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-4 py-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Select
                       aria-label={`Change status for ${o.id}`}
                       value={o.status}
@@ -275,11 +282,12 @@ export default function OrdersTable() {
                       }}
                       className="min-w-[9rem]"
                     >
-                      {/* Always show current status to keep the label visible */}
-                      <option value={o.status}>{o.status.replace('_', ' ')}</option>
+                      <option value={o.status}>
+                        {o.status.replace("_", " ")}
+                      </option>
                       {nextStatuses(o.status).map((s) => (
                         <option key={s} value={s}>
-                          {s.replace('_', ' ')}
+                          {s.replace("_", " ")}
                         </option>
                       ))}
                     </Select>
@@ -290,18 +298,21 @@ export default function OrdersTable() {
           </table>
         </div>
 
-        {/* Footer / Pagination */}
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-3 dark:border-slate-800">
           <p className="text-xs text-slate-500">
-            Page{' '}
-            <span className="font-medium text-slate-700 dark:text-slate-200">{page}</span>
+            Page{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              {page}
+            </span>
           </p>
           <div className="flex gap-2">
             <Button
               aria-label="Previous page"
               variant="secondary"
               size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() =>
+                setState((s) => ({ ...s, page: Math.max(1, s.page - 1) }))
+              }
               disabled={page === 1 || q.isFetching}
             >
               Prev
@@ -310,12 +321,12 @@ export default function OrdersTable() {
               aria-label="Next page"
               variant="secondary"
               size="sm"
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setState((s) => ({ ...s, page: s.page + 1 }))}
               disabled={
                 q.isFetching ||
                 (q.data &&
-                typeof q.data.limit === 'number' &&
-                typeof q.data.total === 'number'
+                typeof q.data.limit === "number" &&
+                typeof q.data.total === "number"
                   ? page * q.data.limit >= q.data.total
                   : false)
               }
@@ -326,7 +337,6 @@ export default function OrdersTable() {
         </div>
       </div>
 
-      {/* Detail modal */}
       <OrderDetailModal
         open={open}
         order={detailQ.data ?? null}

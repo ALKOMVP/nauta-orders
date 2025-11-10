@@ -2,21 +2,16 @@
 
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { Route } from "next"; // ✅ para typedRoutes
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { fetchOrders, patchStatus } from "./orders.api";
 import type { Order, OrderStatus } from "@/lib/types";
 import { canTransition, nextStatuses } from "@/lib/transitions";
 import { isOverdue, isNear } from "@/lib/eta";
 
-/**
- * Force dynamic rendering on CF Pages / SSR to avoid SSG prerender issues.
- * Safe to use alongside "use client".
- */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/** Normalize possible API shapes. */
 function normalizeList(payload: any): {
   items: Order[];
   total: number;
@@ -33,24 +28,26 @@ function normalizeList(payload: any): {
   return { items, total, limit };
 }
 
-/** Build a typed route preserving current params (for Next typedRoutes). */
-function buildQS(
-  sp: URLSearchParams,
-  overrides: Record<string, string | undefined>
-): Route {
-  const q = new URLSearchParams(sp.toString());
+function currentSearch(): URLSearchParams {
+  return typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+}
+
+function buildQS(overrides: Record<string, string | undefined>): Route {
+  const q = currentSearch();
   for (const [k, v] of Object.entries(overrides)) {
     if (v === undefined || v === "") q.delete(k);
     else q.set(k, v);
   }
-  return `/?${q.toString()}` as Route;
+  const s = q.toString();
+  return (s ? `/?${s}` : "/") as Route;
 }
 
 export default function OrdersPage() {
-  const sp = useSearchParams();
   const router = useRouter();
 
-  // URL-synced state
+  const sp = currentSearch();
   const page = Math.max(1, Number(sp.get("page") ?? 1));
   const limit = Math.max(1, Number(sp.get("limit") ?? 10));
   const status = sp.get("status") ?? "";
@@ -58,7 +55,6 @@ export default function OrdersPage() {
 
   const qc = useQueryClient();
 
-  // Stable query key
   const queryKey = useMemo(
     () => ["orders", { page, limit, status, provider }] as const,
     [page, limit, status, provider]
@@ -74,7 +70,6 @@ export default function OrdersPage() {
   const { items, total, limit: apiLimit } = normalizeList(data);
   const effectiveLimit = apiLimit ?? limit;
 
-  // Mutation
   const mut = useMutation({
     mutationFn: (p: { id: string; status: OrderStatus }) =>
       patchStatus(String(p.id), p.status),
@@ -83,25 +78,23 @@ export default function OrdersPage() {
     },
   });
 
-  // Handlers
   const applyFilter = (k: "status" | "provider", v: string) => {
-    router.push(buildQS(sp, { [k]: v || undefined, page: "1" }));
+    router.push(buildQS({ [k]: v || undefined, page: "1" }));
   };
 
   const goPrev = () => {
     if (page <= 1) return;
-    router.push(buildQS(sp, { page: String(page - 1) }));
+    router.push(buildQS({ page: String(page - 1) }));
   };
 
   const hasNext = total > page * effectiveLimit;
   const goNext = () => {
     if (!hasNext) return;
-    router.push(buildQS(sp, { page: String(page + 1) }));
+    router.push(buildQS({ page: String(page + 1) }));
   };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
-      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
         <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-200">
@@ -109,7 +102,6 @@ export default function OrdersPage() {
         </span>
       </div>
 
-      {/* Error banner */}
       {isError && (
         <div
           role="alert"
@@ -119,7 +111,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Filters */}
       <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -156,7 +147,7 @@ export default function OrdersPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-transparent px-3 text-xs font-medium transition-colors hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ring-offset-white dark:hover:bg-slate-800/60 dark:ring-offset-slate-950 h-8"
               onClick={() =>
                 router.push(
-                  buildQS(sp, {
+                  buildQS({
                     status: undefined,
                     provider: undefined,
                     page: "1",
@@ -171,7 +162,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="max-h-[65vh] overflow-auto rounded-3xl">
           <table
@@ -288,7 +278,6 @@ export default function OrdersPage() {
           </table>
         </div>
 
-        {/* Footer / Pagination */}
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-3 dark:border-slate-800">
           <p className="text-xs text-slate-500">
             Page{" "}
