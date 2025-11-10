@@ -1,0 +1,56 @@
+{
+  "name": "nauta-orders",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Order Management App built with Next.js 14, React Query and TailwindCSS.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "format": "prettier --write .",
+    "preview": "npm run build && next start -p 3000",
+    "cf:rebuild": "rimraf .next && npm run build"
+  },
+  "engines": {
+    "node": ">=20.15.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.7",
+    "clsx": "^2.1.1",
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.4.3",
+    "@types/node": "^20.19.24",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react-swc": "^4.2.1",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.5",
+    "jsdom": "^27.1.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.10",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.9"
+  },
+  "vitest": {
+    "environment": "jsdom",
+    "setupFiles": [
+      "./src/tests/vitest.setup.ts"
+    ]
+  }
+}
